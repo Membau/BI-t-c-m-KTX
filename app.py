@@ -92,90 +92,122 @@ with tab3:
     st.header("Xử lý comment AI không tự chốt được")
     if os.path.exists(PENDING_FILE):
         try:
+            # Đọc file và dọn dẹp dữ liệu lỗi rỗng (NaN)
             df_rev = pd.read_csv(PENDING_FILE)
+            df_rev["raw_comment"] = df_rev["raw_comment"].fillna("").astype(str)
+            df_rev = df_rev[df_rev["raw_comment"].str.strip() != ""] # Bỏ các dòng trống
+            
             if not df_rev.empty:
-                sel_comment = st.selectbox("Chọn comment:", df_rev["raw_comment"].unique())
-                curr_row = df_rev[df_rev["raw_comment"] == sel_comment].iloc[0]
-                st.info(f"Khách viết: {sel_comment}")
+                # Lấy danh sách comment để đưa vào Selectbox
+                unique_comments = df_rev["raw_comment"].unique()
+                sel_comment = st.selectbox("Chọn comment:", unique_comments)
                 
-                with st.form("fix_ai_form"):
-                    st.write("**1. Thông tin giao hàng chung:**")
-                    col_info1, col_info2 = st.columns(2)
-                    f_addr = col_info1.text_input("Địa chỉ:", value=str(curr_row.get('dia_chi', '')))
-                    f_sdt = col_info2.text_input("SĐT:", value=str(curr_row.get('sdt', '')))
+                # Lọc data theo comment đã chọn
+                filtered_df = df_rev[df_rev["raw_comment"] == sel_comment]
+                
+                # KIỂM TRA AN TOÀN TRƯỚC KHI TRÍCH XUẤT (Fix lỗi iloc[0])
+                if not filtered_df.empty:
+                    curr_row = filtered_df.iloc[0]
+                    st.info(f"Khách viết: {sel_comment}")
                     
-                    st.write("**2. Danh sách món ăn (Bấm dấu + ở dưới bảng để thêm món):**")
-                    menu_list = pd.read_excel(MENU_FILE)["Tên Món"].tolist() if os.path.exists(MENU_FILE) else []
-                    
-                    # BỔ SUNG GHI CHÚ VÀO BẢNG
-                    df_items_input = pd.DataFrame([{"mon_an": "", "so_luong": 1, "ghi_chu": ""}])
-                    
-                    edited_items = st.data_editor(
-                        df_items_input,
-                        num_rows="dynamic",
-                        column_config={
-                            "mon_an": st.column_config.SelectboxColumn("🍲 Tên món", options=menu_list, width="medium"),
-                            "so_luong": st.column_config.NumberColumn("🔢 SL", min_value=1),
-                            "ghi_chu": st.column_config.TextColumn("📝 Ghi chú (Ít cay, thêm cơm...)", width="large")
-                        },
-                        hide_index=True,
-                        use_container_width=True
-                    )
-                    
-                    c_btn1, c_btn2 = st.columns(2)
-                    if c_btn1.form_submit_button("✅ Chốt đơn & Dạy AI"):
-                        valid_items = edited_items[edited_items["mon_an"].str.strip() != ""]
+                    with st.form("fix_ai_form"):
+                        st.write("**1. Thông tin giao hàng chung:**")
+                        col_info1, col_info2 = st.columns(2)
                         
-                        if valid_items.empty:
-                            st.error("Vui lòng chọn ít nhất 1 món ăn!")
-                        else:
-                            orders_for_ai = []
-                            for _, item in valid_items.iterrows():
-                                f_mon = item["mon_an"]
-                                f_qty = int(item["so_luong"])
-                                f_note = str(item.get("ghi_chu", ""))
-                                
-                                new_order = {
-                                    "uid": curr_row["uid"], "thoi_gian": curr_row["thoi_gian"], 
-                                    "mon_an": f_mon, "so_luong": f_qty, 
-                                    "don_gia": 30000, "doanh_thu": 30000 * f_qty, 
-                                    "dia_chi": f_addr, "sdt": f_sdt, 
-                                    "ghi_chu": f_note, # LƯU GHI CHÚ
-                                    "raw_comment": sel_comment
-                                } 
-                                clean_d = {col: new_order.get(col, "") for col in STANDARD_COLUMNS}
-                                pd.DataFrame([clean_d]).to_csv(ORDER_FILE, mode='a', header=not os.path.exists(ORDER_FILE), index=False)
-                                
-                                orders_for_ai.append({
-                                    "is_order": True, "mon_an": f_mon, "so_luong": f_qty,
-                                    "dia_chi": f_addr, "sdt": f_sdt, "ghi_chu": f_note
-                                })
+                        # Dùng .get() để tránh lỗi nếu thiếu cột
+                        f_addr = col_info1.text_input("Địa chỉ:", value=str(curr_row.get('dia_chi', '')))
+                        f_sdt = col_info2.text_input("SĐT:", value=str(curr_row.get('sdt', '')))
+                        
+                        st.write("**2. Danh sách món ăn (Bấm dấu + ở dưới bảng để thêm món):**")
+                        menu_list = pd.read_excel(MENU_FILE)["Tên Món"].tolist() if os.path.exists(MENU_FILE) else []
+                        
+                        df_items_input = pd.DataFrame([{"mon_an": "", "so_luong": 1, "ghi_chu": ""}])
+                        
+                        edited_items = st.data_editor(
+                            df_items_input,
+                            num_rows="dynamic",
+                            column_config={
+                                "mon_an": st.column_config.SelectboxColumn("🍲 Tên món", options=menu_list, width="medium"),
+                                "so_luong": st.column_config.NumberColumn("🔢 SL", min_value=1),
+                                "ghi_chu": st.column_config.TextColumn("📝 Ghi chú (Ít cay, thêm cơm...)", width="large")
+                            },
+                            hide_index=True,
+                            use_container_width=True
+                        )
+                        
+                        c_btn1, c_btn2 = st.columns(2)
+                        btn_chot_don = c_btn1.form_submit_button("✅ Chốt đơn & Dạy AI")
+                        btn_xoa_rac = c_btn2.form_submit_button("🗑️ Xóa rác")
+                        
+                        # XỬ LÝ LƯU ĐƠN HÀNG
+                        if btn_chot_don:
+                            valid_items = edited_items[edited_items["mon_an"].str.strip() != ""]
                             
-                            new_ex = {"comment": sel_comment, "orders": orders_for_ai}
-                            if os.path.exists(EXAMPLES_FILE):
-                                with open(EXAMPLES_FILE, "r", encoding="utf-8") as f:
-                                    curr_examples = json.load(f)
-                            else: curr_examples = []
+                            if valid_items.empty:
+                                st.error("Vui lòng chọn ít nhất 1 món ăn!")
+                            else:
+                                orders_for_ai = []
+                                for _, item in valid_items.iterrows():
+                                    f_mon = item["mon_an"]
+                                    f_qty = int(item["so_luong"])
+                                    f_note = str(item.get("ghi_chu", ""))
+                                    
+                                    new_order = {
+                                        "uid": curr_row.get("uid", ""), 
+                                        "thoi_gian": curr_row.get("thoi_gian", ""), 
+                                        "mon_an": f_mon, 
+                                        "so_luong": f_qty, 
+                                        "don_gia": 30000, 
+                                        "doanh_thu": 30000 * f_qty, 
+                                        "dia_chi": f_addr, 
+                                        "sdt": f_sdt, 
+                                        "ghi_chu": f_note, 
+                                        "raw_comment": sel_comment
+                                    } 
+                                    clean_d = {col: new_order.get(col, "") for col in STANDARD_COLUMNS}
+                                    pd.DataFrame([clean_d]).to_csv(ORDER_FILE, mode='a', header=not os.path.exists(ORDER_FILE), index=False)
+                                    
+                                    orders_for_ai.append({
+                                        "is_order": True, "mon_an": f_mon, "so_luong": f_qty,
+                                        "dia_chi": f_addr, "sdt": f_sdt, "ghi_chu": f_note
+                                    })
                                 
-                            curr_examples = [ex for ex in curr_examples if ex.get("comment") != sel_comment]
-                            curr_examples.append(new_ex)
-                            with open(EXAMPLES_FILE, "w", encoding="utf-8") as f:
-                                json.dump(curr_examples, f, ensure_ascii=False, indent=4)
-                            
+                                # Dạy AI
+                                if os.path.exists(EXAMPLES_FILE):
+                                    with open(EXAMPLES_FILE, "r", encoding="utf-8") as f:
+                                        curr_examples = json.load(f)
+                                else: 
+                                    curr_examples = []
+                                    
+                                new_ex = {"comment": sel_comment, "orders": orders_for_ai}
+                                curr_examples = [ex for ex in curr_examples if ex.get("comment") != sel_comment]
+                                curr_examples.append(new_ex)
+                                
+                                with open(EXAMPLES_FILE, "w", encoding="utf-8") as f:
+                                    json.dump(curr_examples, f, ensure_ascii=False, indent=4)
+                                
+                                # Xóa comment đã xử lý khỏi Pending file
+                                df_rev = df_rev[df_rev["raw_comment"] != sel_comment]
+                                df_rev.to_csv(PENDING_FILE, index=False)
+                                st.success(f"Đã chốt {len(valid_items)} món!")
+                                st.rerun()
+                                
+                        # XỬ LÝ XÓA RÁC
+                        if btn_xoa_rac:
                             df_rev = df_rev[df_rev["raw_comment"] != sel_comment]
                             df_rev.to_csv(PENDING_FILE, index=False)
-                            st.success(f"Đã chốt {len(valid_items)} món!")
+                            st.success("Đã dọn dẹp bình luận rác!")
                             st.rerun()
                             
-                    if c_btn2.form_submit_button("🗑️ Xóa rác"):
-                        df_rev = df_rev[df_rev["raw_comment"] != sel_comment]
-                        df_rev.to_csv(PENDING_FILE, index=False)
-                        st.success("Đã dọn dẹp bình luận rác!")
-                        st.rerun()
+                else:
+                    st.warning("🔄 Giao diện đang cập nhật, vui lòng đợi 1 giây hoặc chọn comment khác.")
+                    
             else:
-                st.success("Không có comment nào chờ duyệt.")
+                st.success("Tất cả comment đã được xử lý xong!")
         except pd.errors.EmptyDataError:
             st.success("File chờ duyệt trống.")
+        except Exception as e:
+            st.error(f"Đã xảy ra lỗi: {str(e)}")
     else:
         st.info("Không có dữ liệu chờ duyệt.")
 
