@@ -1,0 +1,23 @@
+[
+    {
+        "comment": "lấy gà hấp hành với cơm trắng thêm, giao rào A17, sdt 0592800273",
+        "orders": [
+            {
+                "is_order": true,
+                "mon_an": "Cơm chiên gà hấp hành",
+                "so_luong": 1,
+                "dia_chi": "rào A17",
+                "sdt": "592800273",
+                "ghi_chu": ""
+            },
+            {
+                "is_order": true,
+                "mon_an": "Cơm thêm",
+                "so_luong": 1,
+                "dia_chi": "rào A17",
+                "sdt": "592800273",
+                "ghi_chu": "None"
+            }
+        ]
+    }
+]

@@ -1,0 +1,30 @@
+UID_1000 | 23:32 PM | 3p cơm xả ớt, H1 bk, 0371077069
+UID_1001 | 23:34 PM | lấy gà hấp hành với cơm trắng thêm, giao rào A17, sdt 0592800273
+UID_1002 | 23:36 PM | lấy heo xù sốt me với cơm trắng thêm, giao rào A9, sdt 0376654567
+UID_1003 | 23:38 PM | Up
+UID_1004 | 23:38 PM | 3p gà chiên xả ớt, H1 bk, 0775206029
+UID_1005 | 23:39 PM | 4p gà me, AH1, 0333925380
+UID_1006 | 23:39 PM | 3p gà sốt me, toà BA4, 0769749572
+UID_1007 | 23:41 PM | 3p cơm trắng thêm, rào A9, 0557856808
+UID_1008 | 23:42 PM | lấy gà chiên xả ớt với thêm trứng, giao AG3, sdt 0801920367
+UID_1009 | 23:43 PM | 1p gà chiên xả ớt, AH1, 0313386279
+UID_1010 | 23:44 PM | 4p heo xù me, AG3, 0771268083
+UID_1011 | 23:44 PM | 2p trứng thêm, cổng BK, 0325421524
+UID_1012 | 23:45 PM | 3 trứng thêm, AH1, 0968541788
+UID_1013 | 23:45 PM | ê m cho tao 2 gà sốt me, rào AH, 0512161133
+UID_1014 | 23:47 PM | C còn nhận đơn nhé
+UID_1015 | 23:48 PM | 1 heo xù me, rào A17, 0904939345
+UID_1016 | 23:49 PM | 2p thêm trứng, rào AH, 0950887002
+UID_1017 | 23:51 PM | Cho e 3 cơm heo, rào AH, 0903799688
+UID_1018 | 23:51 PM | lấy gà viên sốt me với + trứng, giao cổng BK, sdt 0731517084
+UID_1019 | 23:53 PM | lấy gà me với cơm thêm, giao rào A9, sdt 0966088237
+UID_1020 | 23:54 PM | lấy gà hấp với + trứng, giao rào A14, sdt 0793354620
+UID_1021 | 23:54 PM | Up
+UID_1022 | 23:55 PM | lấy gà viên dòn với cơm thêm, giao H1 bk, sdt 0519076301
+UID_1023 | 23:57 PM | 2p gà viên, AH1, 0999215312
+UID_1024 | 23:57 PM | 3p gà me, rào A9, 0364988024
+UID_1025 | 23:58 PM | Cho e 2 heo me, cổng BK, 0951546744
+UID_1026 | 23:59 PM | ê m cho tao 1 gà chiên xả ớt, AH1, 0849198802
+UID_1027 | 23:59 PM | 4p + trứng, AG3, 0736089771
+UID_1028 | 00:00 AM | 1p cơm gà me, rào A9, 0891939667
+UID_1029 | 00:00 AM | ê m cho tao 1 heo xù, rào AH, 0930508658
