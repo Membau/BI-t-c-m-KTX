@@ -12,8 +12,17 @@ ORDER_FILE = "output/stream_orders.csv"
 SHIPPED_FILE = "output/shipped_orders.csv"  
 EXAMPLES_FILE = "data/few_shot_examples.json"
 
-# ĐÃ THÊM raw_comment VÀO CHUẨN CỘT
-STANDARD_COLUMNS = ["uid", "thoi_gian", "mon_an", "so_luong", "don_gia", "doanh_thu", "dia_chi", "sdt", "ghi_chu", "raw_comment"]
+# ĐÃ THÊM raw_comment VÀ THÊM store_name VÀO CHUẨN CỘT
+STANDARD_COLUMNS = ["store_name", "uid", "thoi_gian", "mon_an", "so_luong", "don_gia", "doanh_thu", "dia_chi", "sdt", "ghi_chu", "raw_comment"]
+
+from kafka import KafkaProducer
+try:
+    producer = KafkaProducer(
+        bootstrap_servers='localhost:9092',
+        value_serializer=lambda v: json.dumps(v).encode('utf-8')
+    )
+except Exception:
+    producer = None
 
 st.set_page_config(page_title="Hệ thống BI Đặt Cơm KTX", layout="wide")
 st.title("📊 BI Dashboard & Quản lý Đơn hàng KTX")
@@ -66,6 +75,24 @@ with tab1:
                 st.plotly_chart(fig_item, use_container_width=True)
             else:
                 st.info("Chưa có món nào được giao thành công.")
+                
+        # THÊM BIỂU ĐỒ DOANH THU THEO CHI NHÁNH TỪ PYSPARK
+        st.subheader("Doanh thu theo Chi nhánh (Real-time PySpark Analytics)")
+        spark_summary_file = "output/spark_summary.json"
+        if os.path.exists(spark_summary_file):
+            try:
+                with open(spark_summary_file, 'r', encoding='utf-8') as f:
+                    summary_data = json.load(f)
+                df_spark = pd.DataFrame(summary_data)
+                if not df_spark.empty:
+                    fig_spark = px.bar(df_spark, x="store_name", y="total_revenue", color="store_name", title="Tổng doanh thu từng chi nhánh")
+                    st.plotly_chart(fig_spark, use_container_width=True)
+                else:
+                    st.info("PySpark chưa tổng hợp được doanh thu chi nhánh nào.")
+            except Exception as e:
+                st.warning(f"Lỗi đọc kết quả PySpark: {e}")
+        else:
+            st.info("Đang chờ PySpark tổng hợp dữ liệu...")
     else:
         st.warning("Hệ thống chưa có dữ liệu kinh doanh.")
 
@@ -153,6 +180,7 @@ with tab3:
                                     f_note = str(item.get("ghi_chu", ""))
                                     
                                     new_order = {
+                                        "store_name": curr_row.get("store_name", "KTX_Chính"),
                                         "uid": curr_row.get("uid", ""), 
                                         "thoi_gian": curr_row.get("thoi_gian", ""), 
                                         "mon_an": f_mon, 
@@ -254,6 +282,7 @@ with tab4:
         for sdt in unique_sdts:
             df_sdt = df_display[df_display["sdt"] == sdt].copy()
             
+            store_name_chung = df_sdt["store_name"].iloc[0] if "store_name" in df_sdt.columns else "KTX_Chính"
             uid_chung = df_sdt["uid"].iloc[0]
             thoi_gian_chung = df_sdt["thoi_gian"].iloc[0]
             
@@ -290,11 +319,29 @@ with tab4:
                     use_container_width=True
                 )
                 
-                c1, c2 = st.columns(2)
+                c1, c2, c3 = st.columns(3)
                 btn_ship = c1.form_submit_button("🚚 Đã giao đơn này")
-                btn_save_ai = c2.form_submit_button("💾 Lưu chỉnh sửa & Dạy AI (Chưa giao)")
+                btn_save_ai = c2.form_submit_button("💾 Lưu chỉnh sửa & Dạy AI")
+                btn_delete = c3.form_submit_button("🗑️ Hủy đơn rác")
                 
-                if btn_ship or btn_save_ai:
+                if btn_delete:
+                    # Dạy AI đây là đơn rác
+                    if len(comments) > 0:
+                        new_ex = {"comment": comments[0], "orders": [{"is_order": False}]}
+                        curr_examples = json.load(open(EXAMPLES_FILE, "r", encoding="utf-8")) if os.path.exists(EXAMPLES_FILE) else []
+                        curr_examples = [ex for ex in curr_examples if ex.get("comment") != new_ex["comment"]]
+                        curr_examples.append(new_ex)
+                        with open(EXAMPLES_FILE, "w", encoding="utf-8") as f:
+                            json.dump(curr_examples, f, ensure_ascii=False, indent=4)
+                    
+                    df_display = df_display[df_display["sdt"] != sdt]
+                    df_display.to_csv(ORDER_FILE, index=False)
+                    if "df_shipping_view" in st.session_state:
+                        del st.session_state.df_shipping_view
+                    st.success("🗑️ Đã xóa đơn rác và nạp dữ liệu cho AI!")
+                    st.rerun()
+                    
+                elif btn_ship or btn_save_ai:
                     valid_items = edited_items[edited_items["mon_an"].astype(str).str.strip() != ""]
                     
                     if valid_items.empty:
@@ -316,6 +363,7 @@ with tab4:
                         sdt_val = str(row.get("sdt", ""))
                         
                         processed_orders.append({
+                            "store_name": store_name_chung,
                             "uid": uid_chung, "thoi_gian": thoi_gian_chung,
                             "mon_an": mon, "so_luong": qty, "don_gia": don_gia, "doanh_thu": doanh_thu,
                             "dia_chi": dia_chi_val, "sdt": sdt_val, "ghi_chu": ghi_chu_val,
@@ -339,10 +387,19 @@ with tab4:
                             json.dump(curr_examples, f, ensure_ascii=False, indent=4)
                         if btn_save_ai:
                             st.toast("🧠 Đã nạp dữ liệu gom đơn mới cho AI!")
+                            if "df_shipping_view" in st.session_state:
+                                del st.session_state.df_shipping_view
+                            st.rerun()
                     
                     if btn_ship:
                         df_ship = pd.DataFrame(processed_orders).reindex(columns=STANDARD_COLUMNS)
                         df_ship.to_csv(SHIPPED_FILE, mode='a', header=not os.path.exists(SHIPPED_FILE), index=False)
+                        
+                        # Bắn lên Kafka cho PySpark đọc
+                        if producer:
+                            for order in processed_orders:
+                                producer.send("shipped_orders_stream", value=order)
+                            producer.flush()
                         
                         df_display = df_display[df_display["sdt"] != sdt]
                         df_display.to_csv(ORDER_FILE, index=False)

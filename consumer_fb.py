@@ -11,7 +11,7 @@ os.makedirs("output", exist_ok=True)
 
 # BƯỚC KHÓA CỘT: Định nghĩa danh sách các cột chuẩn xác nhất
 # BƯỚC KHÓA CỘT
-STANDARD_COLUMNS = ["uid", "thoi_gian", "mon_an", "so_luong", "don_gia", "doanh_thu", "dia_chi", "sdt", "ghi_chu", "raw_comment"]
+STANDARD_COLUMNS = ["store_name", "uid", "thoi_gian", "mon_an", "so_luong", "don_gia", "doanh_thu", "dia_chi", "sdt", "ghi_chu", "raw_comment"]
 
 # ---------------------------------------------------------
 # 1. LOAD MENU TỪ EXCEL (DYNAMIC MENU)
@@ -94,14 +94,26 @@ def main():
     print("\n🎧 Consumer đang lắng nghe...")
     for message in consumer:
         raw_text = message.value.get("raw_comment", "")
-        parts = raw_text.split("|", 2)
-        if len(parts) < 3: continue
-        
-        uid, time_str, comment = parts[0].strip(), parts[1].strip(), parts[2].strip()
+        parts = raw_text.split("|")
+        if len(parts) >= 4:
+            # Có chi nhánh: STORE | UID | TIME | COMMENT
+            store_name = parts[0].strip()
+            uid = parts[1].strip()
+            time_str = parts[2].strip()
+            comment = "|".join(parts[3:]).strip()
+        elif len(parts) == 3:
+            # Không có chi nhánh: UID | TIME | COMMENT
+            store_name = "KTX_Chính"
+            uid = parts[0].strip()
+            time_str = parts[1].strip()
+            comment = parts[2].strip()
+        else:
+            continue
         
         ai_results = parse_order_with_ollama(comment) 
         
         for ai_result in ai_results:
+            ai_result["store_name"] = store_name
             ai_result["uid"] = uid
             ai_result["thoi_gian"] = time_str
             ai_result["raw_comment"] = comment 

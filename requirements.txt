@@ -2,3 +2,8 @@ selenium
 requests
 ollama
 pandas
+streamlit
+plotly
+kafka-python
+pyspark
+openpyxl
