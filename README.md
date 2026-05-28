@@ -1,4 +1,199 @@
-# 🍱 Hệ thống BI Đặt Cơm KTX
+# 🍱 Dormitory Meal Ordering BI System
+
+> **Real-time Business Intelligence system** for dormitory meal ordering — automatically receives orders from Facebook comments, analyzes with local AI (Gemma 3 via Ollama), streams data through Kafka 4.2, and displays on a Streamlit Dashboard.
+
+---
+
+## ✨ Key Features
+
+- **Automated Facebook comment reading** via Selenium, pushing to Kafka topics in real time
+- **AI-powered order analysis** using Gemma 3 running fully offline (via Ollama), extracting dish names, quantities, addresses, and phone numbers from natural customer text
+- **Automatic few-shot learning**: every time an admin corrects an AI error, the system remembers and improves accuracy for next time
+- **MapReduce revenue analysis** by dish and order status
+- **4-tab Streamlit Dashboard**: BI Reports, Menu Management, Error Comment Review, Delivery Management
+- **One-click launch** on Windows via `run_project.bat`
+
+---
+
+## 🏗️ System Architecture
+
+```
+Facebook Comments
+      │
+      ▼
+ getComment.py  ──(Selenium)──►  producer_fb.py
+                                       │
+                                  Kafka Topic
+                                       │
+                              consumer_fb.py / AI_consumer.py
+                                       │
+                          ┌────────────┴────────────┐
+                          ▼                         ▼
+                  stream_orders.csv        pending_reviews.csv
+                  (AI confirmed)           (AI uncertain)
+                          │
+                          ▼
+                       app.py  (Streamlit Dashboard)
+                          │
+              ┌───────────┼───────────┐
+              ▼           ▼           ▼
+         BI Reports   Delivery   AI Error Review
+```
+
+---
+
+## 📁 Directory Structure
+
+```
+BI-t-c-m-KTX/
+├── data/
+│   ├── menu.xlsx              # Menu (Dish Name, Price, Status)
+│   └── few_shot_examples.json # AI training examples, auto-updated on admin corrections
+├── output/                    # Auto-created on run
+│   ├── stream_orders.csv      # Orders awaiting delivery
+│   ├── shipped_orders.csv     # Delivered orders
+│   └── pending_reviews.csv    # Comments AI couldn't process
+├── AI_consumer.py             # Module calling Gemma 3 to parse orders
+├── app.py                     # Main Streamlit Dashboard
+├── consumer_fb.py             # Kafka consumer processing comments
+├── generate_sample_data.py    # Generate sample data for testing
+├── getComment.py              # Facebook comment crawler using Selenium
+├── mapreduce_analysis.py      # MapReduce analysis (revenue, dish quantities)
+├── producer_fb.py             # Kafka producer pushing comments to topic
+├── requirements.txt
+└── run_project.bat            # Full system startup script (Windows)
+```
+
+---
+
+## ⚙️ System Requirements
+
+| Component | Version |
+|---|---|
+| Python | ≥ 3.10 |
+| Apache Kafka | 4.2+ |
+| Ollama | Latest |
+| AI Model | `gemma3` (pull via Ollama) |
+| OS | Windows (has `.bat`), Linux/macOS also supported |
+
+---
+
+## 🚀 Installation & Running
+
+### 1. Clone repo
+
+```bash
+git clone https://github.com/Membau/BI-t-c-m-KTX.git
+cd BI-t-c-m-KTX
+```
+
+### 2. Install Python libraries
+
+```bash
+pip install -r requirements.txt
+pip install streamlit plotly openpyxl kafka-python
+```
+
+### 3. Install and start Ollama + Gemma 3
+
+```bash
+# Install Ollama at https://ollama.com
+ollama pull gemma3
+ollama serve
+```
+
+### 4. Start Kafka
+
+Download Apache Kafka 4.2, extract, then run:
+
+```bash
+# KRaft mode (no Zookeeper needed)
+bin/kafka-server-start.sh config/kraft/server.properties
+```
+
+### 5. Create Kafka topic
+
+```bash
+bin/kafka-topics.sh --create --topic fb_comments --bootstrap-server localhost:9092
+```
+
+### 6. Run the full system
+
+**Windows (1 click):**
+```
+run_project.bat
+```
+
+**Manual (open 3 terminals):**
+```bash
+# Terminal 1: AI Consumer
+python consumer_fb.py
+
+# Terminal 2: Facebook Crawler
+python getComment.py
+
+# Terminal 3: Dashboard
+streamlit run app.py
+```
+
+Access dashboard at: `http://localhost:8501`
+
+---
+
+## 📊 Dashboard Usage Guide
+
+| Tab | Function |
+|---|---|
+| 📊 BI Reports | View actual/projected revenue, order composition charts, top-selling dishes (MapReduce) |
+| 🍴 Menu Management | Add/edit/delete dishes, update prices and availability (Available / Out of stock) |
+| 🔎 Error Comment Review | Review comments AI couldn't parse, manually correct and re-train AI |
+| 🚚 Delivery | View pending orders, fix AI misreads, confirm delivery |
+
+> 💡 **Tip:** After changing the Menu, restart `consumer_fb.py` so the AI loads the new menu.
+
+---
+
+## 🧠 AI Learning Mechanism
+
+The system uses **dynamic few-shot prompting**:
+
+1. AI reads `few_shot_examples.json` each time it processes a comment
+2. When an admin fixes an error in the "Error Comment Review" or "Delivery" tab, the `(comment → correct order)` pair is written to this file
+3. Next time, AI uses these examples to reason more accurately — **no model retraining needed**
+
+---
+
+## 🔧 Customization
+
+- **Change Facebook Page/Post:** edit URL in `getComment.py`
+- **Switch AI model:** replace `"gemma3"` with another model name in `AI_consumer.py` (model must be pulled via Ollama first)
+- **Add new data sources:** create a new producer pushing to the same Kafka topic
+
+---
+
+## 📦 Main Dependencies
+
+```
+selenium       # Crawl Facebook comments
+requests       # Call Ollama API
+ollama         # (optional) Python client for Ollama
+pandas         # Data processing
+streamlit      # Dashboard UI
+plotly         # Charts
+openpyxl       # Read/write Excel files (menu.xlsx)
+kafka-python   # Kafka producer/consumer
+```
+
+---
+
+## 📝 License
+
+Academic project — free to use and modify.
+
+---
+---
+
+# 🍱 Hệ thống BI Đặt Cơm Ký Túc Xá
 
 > **Hệ thống Business Intelligence thời gian thực** cho dịch vụ đặt cơm ký túc xá — tự động nhận đơn từ bình luận Facebook, phân tích bằng AI cục bộ (Gemma 3 qua Ollama), streaming dữ liệu qua Kafka 4.2, và hiển thị trên Dashboard Streamlit.
 
