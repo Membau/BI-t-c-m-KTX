@@ -1,0 +1,155 @@
+[
+  {
+    "slide_number": 1,
+    "slide_title": "HỆ THỐNG BI & AI TỰ ĐỘNG HÓA ĐẶT CƠM KTX",
+    "presentation_script": "Xin chào thầy và các bạn hội đồng, nhóm chúng em xin phép được bắt đầu phần trình bày đồ án với đề tài 'Hệ thống BI & AI Tự động hóa Đặt Cơm KTX'. Trong kỷ nguyên số, dữ liệu đang trở thành mạch máu của doanh nghiệp, nhưng việc thu thập và xử lý hàng trăm bình luận đặt món phi cấu trúc theo thời gian thực vẫn là một bài toán khó. Để giải quyết, nhóm đã tự tay thiết kế và lập trình toàn bộ hệ thống từ đầu đến cuối: sử dụng Python và Streamlit để làm Dashboard tổng, tích hợp mô hình Gemma 3 qua nền tảng Ollama để trích xuất ngữ nghĩa tự động, triển khai Apache Kafka để nhận luồng comment liên tục và dùng PySpark xử lý Streaming Data. Hệ thống này không chỉ tự động hóa quy trình chốt đơn mà còn là một nền tảng BI mạnh mẽ, hướng tới triết lý Data-driven Decision Making trong vận hành KTX.",
+    "key_terms": [
+      "Business Intelligence",
+      "Gemma 3 (Ollama)",
+      "Apache Kafka",
+      "PySpark",
+      "Streamlit",
+      "Data-driven Decision Making"
+    ],
+    "transition_to_next_slide": "Trước khi đi chi tiết vào từng dòng code và kiến trúc, em xin giới thiệu về team đã xây dựng dự án này."
+  },
+  {
+    "slide_number": 2,
+    "slide_title": "DANH SÁCH THÀNH VIÊN",
+    "presentation_script": "Dự án này được lên ý tưởng, thiết kế kiến trúc và viết code bởi hai thành viên. Em là Trương Minh Nguyên, mã số sinh viên 2212331, và bạn đồng hành cùng em là Nguyễn Minh Bảo, mã số sinh viên 2410272. Cả hai chúng em đã cùng nhau xử lý từ tầng Data Ingestion với Selenium, cấu hình topic Kafka, viết API kết nối AI cục bộ trên port 11434, đến việc xây dựng giao diện Streamlit với 4 phân hệ chính: Báo cáo BI, Quản lý Menu, Duyệt Comment Lỗi và Giao hàng.",
+    "key_terms": [
+      "Kiến trúc hệ thống",
+      "Streamlit Dashboard",
+      "Local AI Port 11434"
+    ],
+    "transition_to_next_slide": "Để hiểu tại sao nhóm lại quyết tâm xây dựng một kiến trúc đồ sộ như vậy, chúng ta hãy cùng nhìn vào bài toán kinh doanh thực tế."
+  },
+  {
+    "slide_number": 3,
+    "slide_title": "BÀI TOÁN KINH DOANH",
+    "presentation_script": "Quy trình chốt đơn hiện tại của quán ăn KTX chủ yếu là nhân viên ngồi đọc bình luận thủ công. Việc này gây ra điểm nghẽn (bottleneck) trầm trọng: năng suất thấp và rủi ro sai sót cao do sinh viên liên tục dùng từ viết tắt, tiếng lóng như '2p gà me rào'. Nhưng nghiêm trọng nhất là 'Mù mờ dữ liệu' (Real-time Blindness). Nhà bếp không thể tổng hợp ngay số lượng món cần làm, dẫn đến chuẩn bị nguyên liệu hoàn toàn cảm tính. Chúng em nhận ra rằng, bài toán này không thể chỉ giải bằng cách viết một tool auto-reply đơn giản, mà cần một nền tảng BI & AI thực thụ để biến cái đống dữ liệu văn bản lộn xộn kia thành Insights thời gian thực.",
+    "key_terms": [
+      "Real-time Blindness",
+      "Data-driven",
+      "Bottleneck",
+      "Insights"
+    ],
+    "transition_to_next_slide": "Vì vậy, nhóm đã đặt ra các mục tiêu rõ ràng cho dự án như sau."
+  },
+  {
+    "slide_number": 4,
+    "slide_title": "MỤC TIÊU DỰ ÁN",
+    "presentation_script": "Hệ thống phải vượt qua ngưỡng tự động hóa thông thường để đạt được 4 mục tiêu chiến lược. Một là Giảm rủi ro thông qua Data-driven: nhà bếp biết chính xác cần nấu gì, tránh hao hụt. Hai là Nhận diện cơ hội tăng trưởng: từ báo cáo hệ thống, chủ quán có thể đưa ra chiến lược Up-sell, Cross-sell. Ba là Cải thiện tầm nhìn kinh doanh thông qua việc realtime đồng bộ đơn hàng. Bốn là nền tảng phải dễ dàng Scale-up, chính vì thế chúng em mới quyết định sử dụng Kafka và PySpark thay vì những thư viện xử lý dữ liệu cơ bản.",
+    "key_terms": [
+      "Data-driven",
+      "Scale-up",
+      "Realtime Sync"
+    ],
+    "transition_to_next_slide": "Và mọi quy trình đều phải bắt đầu từ nguyên liệu đầu vào, đó chính là Dữ liệu."
+  },
+  {
+    "slide_number": 5,
+    "slide_title": "TỔNG QUAN DỮ LIỆU",
+    "presentation_script": "Hệ thống phải đối mặt với 3 loại dữ liệu hoàn toàn khác nhau. Ở trung tâm là luồng Unstructured Data đến từ Facebook Comments chứa toàn từ lóng. Để AI có thể chuẩn hóa dữ liệu này, chúng em cung cấp cho nó một tệp Structured Data đó là Menu Excel đóng vai trò như Master Data. Cuối cùng, và cũng là phần code em rất tâm đắc, đó là file JSON Semi-structured mang tên `few_shot_examples.json`. Tệp này lưu trữ lịch sử sửa lỗi của chủ quán trên giao diện Streamlit, đóng vai trò làm Context linh hoạt để AI tự học (Few-shot learning) qua từng ngày.",
+    "key_terms": [
+      "Unstructured Data",
+      "Structured Master Data",
+      "Semi-structured JSON",
+      "few_shot_examples.json"
+    ],
+    "transition_to_next_slide": "Cách 3 loại dữ liệu này tương tác với nhau được thể hiện rõ nhất qua Pipeline luân chuyển dữ liệu."
+  },
+  {
+    "slide_number": 6,
+    "slide_title": "QUY TRÌNH XỬ LÝ DỮ LIỆU",
+    "presentation_script": "Data Pipeline của chúng em bắt đầu bằng việc tool cào dữ liệu đẩy comment thô vào topic `fb_comments` của Apache Kafka. Ở phase tiếp theo (AI Consumer), Python script sẽ đọc từ Kafka và gọi API tới LLM Gemma 3 để trích xuất ra JSON đơn hàng. Các đơn hàng này ngay lập tức được ghi vào các file hệ thống và đồng bộ Real-time lên Streamlit. Phía bên dưới, một nhánh xử lý khác bằng PySpark sẽ tiếp nhận khối dữ liệu khổng lồ này để thực hiện ETL phân tán và tính toán tổng doanh thu. Toàn bộ chu trình từ Ingestion, Event Streaming, đến BI Dashboard được liên kết mượt mà và hoàn toàn tự động.",
+    "key_terms": [
+      "Topic fb_comments",
+      "LLM API",
+      "Streamlit",
+      "PySpark ETL"
+    ],
+    "transition_to_next_slide": "Đi sâu vào phần xử lý Big Data, em xin giải thích lý do tại sao PySpark và MapReduce được áp dụng."
+  },
+  {
+    "slide_number": 7,
+    "slide_title": "XỬ LÝ DỮ LIỆU LỚN VỚI PYSPARK",
+    "presentation_script": "Xử lý dữ liệu lớn bằng Python thuần thường gặp nút thắt cổ chai do cơ chế GIL (Global Interpreter Lock). Để tối ưu, trong mã nguồn, nhóm đã xây dựng script `spark_stream.py`. Script này dùng `SparkSession` để đọc `readStream` trực tiếp từ Kafka, parse JSON linh hoạt và aggregate tổng đơn, tổng doanh thu theo thời gian thực (In-Memory Computing). Bên cạnh đó, ngay trong lõi của Dashboard Streamlit, thay vì dùng hàm GroupBy của Pandas thông thường, nhóm đã tự triển khai thuật toán MapReduce nội bộ (`map_reduce_so_luong_theo_mon`) để thống kê các món ăn bán chạy nhất một cách tối ưu, chuẩn bị sẵn sàng cho kiến trúc phân tán (Cluster-ready).",
+    "key_terms": [
+      "SparkSession.readStream",
+      "JSON parsing",
+      "In-Memory Computing",
+      "MapReduce Algorithm"
+    ],
+    "transition_to_next_slide": "Những công nghệ lõi này kết hợp lại thành một hệ sinh thái mạnh mẽ."
+  },
+  {
+    "slide_number": 8,
+    "slide_title": "HỆ SINH THÁI BIG DATA",
+    "presentation_script": "Hệ sinh thái của hệ thống đứng vững trên 3 chân kiềng. Apache Kafka là Message Broker chịu tải, đảm bảo không rớt đơn dù server có nghẽn cục bộ. PySpark (và thuật toán MapReduce tùy chỉnh) giải quyết bài toán Query và tính toán số liệu trên diện rộng. Và cuối cùng, quan trọng không kém là Generative AI đóng vai trò như một màng lọc Data Cleaning & Transformation siêu thông minh, biến mớ ngôn ngữ hỗn độn trên mạng thành những Dataframe sạch sẽ, cấu trúc hoàn hảo để đẩy lên 4 tab quản lý của Streamlit Dashboard.",
+    "key_terms": [
+      "Message Broker",
+      "PySpark Query",
+      "Data Cleaning",
+      "Data Transformation"
+    ],
+    "transition_to_next_slide": "Về phần Trí tuệ nhân tạo, nhóm đã có một cách tiếp cận khá đặc biệt thay vì dùng API của OpenAI."
+  },
+  {
+    "slide_number": 9,
+    "slide_title": "MÔ HÌNH AI/ML (GENERATIVE AI)",
+    "presentation_script": "Trong file `AI_consumer.py`, thay vì tốn tiền gọi API ngoài, chúng em triển khai model Gemma 3 chạy hoàn toàn Offline qua Ollama ở localhost. Nhóm đã áp dụng kỹ thuật Prompt Engineering nghiêm ngặt: yêu cầu AI bắt buộc trả về định dạng chuẩn JSON và truyền toàn bộ Menu thực tế làm Context để AI đối chiếu tên món. Đặc biệt nhất là tính năng Dynamic Few-shot: mỗi khi AI phân tích sai, admin sửa lỗi trên Streamlit, code sẽ lập tức ghi ví dụ đúng đó vào file `few_shot_examples.json`. Ở lần chạy sau, script tự động load file này nhét vào Prompt. Nhờ vậy, hệ thống có khả năng 'tự tiến hóa' và hiểu lóng mới của sinh viên ngay lập tức mà không cần retrain mô hình.",
+    "key_terms": [
+      "Ollama Localhost",
+      "Force JSON Output",
+      "Dynamic Few-shot",
+      "Prompt Engineering"
+    ],
+    "transition_to_next_slide": "Dù hệ thống mang lại nhiều đột phá, nhưng trong quá trình code và test thực tế, nhóm cũng phát hiện một vài giới hạn."
+  },
+  {
+    "slide_number": 10,
+    "slide_title": "NHỮNG HẠN CHẾ HIỆN TẠI",
+    "presentation_script": "Hạn chế kỹ thuật lớn nhất nằm ở tool cào dữ liệu Selenium, nó rất dễ gãy (crash) khi UI Facebook thay đổi hoặc bị chặn bot. Thứ hai, dù đã code chuẩn PySpark nhưng hiện hệ thống mới chạy ở Local Mode, chưa tận dụng hết sức mạnh Distributed trên cụm server nhiều node do giới hạn phần cứng. Thứ ba, mô hình Ollama tuy bảo mật nhưng ngốn khá nhiều RAM và GPU để xử lý mượt mà luồng stream. Cuối cùng, với những bình luận sai chính tả quá nặng nề mà tệp Few-shot chưa kịp cập nhật, AI đôi lúc vẫn đẩy đơn vào trạng thái 'Duyệt Comment Lỗi' trên Dashboard.",
+    "key_terms": [
+      "Selenium Stability",
+      "PySpark Local Mode",
+      "Hardware Requirements",
+      "Edge-case Errors"
+    ],
+    "transition_to_next_slide": "Mặc dù vậy, giá trị mà hệ thống mang lại cho việc kinh doanh đã chứng minh được tính khả thi của dự án."
+  },
+  {
+    "slide_number": 11,
+    "slide_title": "Ý NGHĨA KINH DOANH",
+    "presentation_script": "Hệ thống BI này đã chứng minh rõ giá trị thực tiễn. Nó tự động hóa hoàn toàn quy trình xử lý, cắt giảm chi phí nhân sự ngồi trực tin nhắn. Tính năng Real-time Sync trên Streamlit giúp tối ưu tốc độ giao hàng, nâng cao trải nghiệm khách. Nhờ các biểu đồ trực quan như 'Top món ăn bán chạy' hay 'Cơ cấu doanh thu', chủ quán dễ dàng ra quyết định (Data-driven). Hơn thế nữa, kiến trúc decoupling tách rời Kafka - AI - PySpark giúp hệ thống cực kỳ dễ bảo trì và có khả năng Scale-up mạnh mẽ ra nhiều cửa hàng khác.",
+    "key_terms": [
+      "Real-time Sync",
+      "Data-driven",
+      "Decoupling Architecture",
+      "Scale-up"
+    ],
+    "transition_to_next_slide": "Trước khi kết thúc, xin phép hội đồng cùng nhìn lại bức tranh tổng thể."
+  },
+  {
+    "slide_number": 12,
+    "slide_title": "TÓM TẮT KIẾN THỨC CỐT LÕI",
+    "presentation_script": "Dự án này là kết tinh của hàng ngàn dòng code xoay quanh 3 trụ cột lớn. Một là Big Data, với khả năng làm chủ Apache Kafka để Streaming và PySpark để tính toán phân tán. Hai là AI, với kỹ thuật Prompt Engineering sâu sắc và Few-shot learning động qua file JSON giúp Gemma 3 trích xuất chính xác. Ba là Business Intelligence, xây dựng trọn vẹn một Dashboard bằng Streamlit để trực quan hóa, quản lý tương tác và mang lại insight quyết định kinh doanh.",
+    "key_terms": [
+      "Big Data (Kafka, PySpark)",
+      "AI (Prompt, Few-shot)",
+      "BI (Streamlit Dashboard)"
+    ],
+    "transition_to_next_slide": "Và triết lý cốt lõi của toàn bộ mã nguồn cũng như đồ án chính là:"
+  },
+  {
+    "slide_number": 13,
+    "slide_title": "THANK YOU",
+    "presentation_script": "Thay mặt nhóm, em xin gửi lời cảm ơn chân thành đến quý thầy cô và các bạn đã chú ý lắng nghe bài thuyết trình. Thông điệp cuối cùng mà hệ thống BI & AI của chúng em muốn mang lại chính là: 'Transform Data into Strategic Growth' - Hãy biến dữ liệu thành sự tăng trưởng chiến lược. Phần trình bày của nhóm em đến đây là kết thúc. Chúng em rất mong nhận được những câu hỏi, những lời phản biện và góp ý từ hội đồng. Xin trân trọng cảm ơn!",
+    "key_terms": [
+      "Transform Data",
+      "Strategic Growth"
+    ],
+    "transition_to_next_slide": "(Kết thúc bài thuyết trình, nhường lời cho Hội đồng đặt câu hỏi)"
+  }
+]
